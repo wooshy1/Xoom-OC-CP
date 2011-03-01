@@ -102,6 +102,7 @@ struct mmc_blk_data {
 	 */
 	unsigned int	part_curr;
 	struct device_attribute force_ro;
+	unsigned int	write_align_size;
 };
 
 static DEFINE_MUTEX(open_lock);
@@ -828,6 +829,39 @@ static inline void mmc_apply_rel_rw(struct mmc_blk_request *brq,
 	 R1_CC_ERROR |		/* Card controller error */		\
 	 R1_ERROR)		/* General/unknown error */
 
+/*
+ * If the request is not aligned, split it into an unaligned
+ * and an aligned portion. Here we can adjust
+ * the size of the MMC request and let the block layer request handle
+ * deal with generating another MMC request.
+ */
+
+static bool mmc_adjust_write(struct mmc_card *card,
+			     struct mmc_request *mrq)
+{
+	unsigned int left_in_page;
+	unsigned int wa_size_blocks;
+	struct mmc_blk_data *md = mmc_get_drvdata(card);
+
+	if (!md->write_align_size)
+		return false;
+
+	wa_size_blocks = md->write_align_size / mrq->data->blksz;
+	left_in_page = wa_size_blocks -
+		(mrq->cmd->arg % wa_size_blocks);
+
+	/* Aligned access. */
+	if (left_in_page == wa_size_blocks)
+		return false;
+
+	/* Not straddling page boundary. */
+	if (mrq->data->blocks <= left_in_page)
+		return false;
+
+	mrq->data->blocks = left_in_page;
+	return true;
+}
+
 static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *req)
 {
 	struct mmc_blk_data *md = mq->data;
@@ -860,6 +894,10 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *req)
 		brq.stop.arg = 0;
 		brq.stop.flags = MMC_RSP_SPI_R1B | MMC_RSP_R1B | MMC_CMD_AC;
 		brq.data.blocks = blk_rq_sectors(req);
+
+		/* Check for unaligned accesses straddling pages. */
+		if (rq_data_dir(req) == WRITE)
+			mmc_adjust_write(card, &brq.mrq);
 
 		/*
 		 * The block layer doesn't support all sector count
