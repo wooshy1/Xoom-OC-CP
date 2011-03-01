@@ -847,6 +847,11 @@ static bool mmc_adjust_write(struct mmc_card *card,
 	if (!md->write_align_size)
 		return false;
 
+	if (md->write_align_limit &&
+		((md->write_align_limit / mrq->data->blksz)
+			< mrq->data->blocks))
+		return false;
+
 	wa_size_blocks = md->write_align_size / mrq->data->blksz;
 	left_in_page = wa_size_blocks -
 		(mrq->cmd->arg % wa_size_blocks);
