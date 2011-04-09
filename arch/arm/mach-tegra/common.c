@@ -33,6 +33,7 @@
 #include <mach/powergate.h>
 #include <mach/system.h>
 
+#include "apbio.h"
 #include "board.h"
 #include "clock.h"
 #include "fuse.h"
@@ -70,6 +71,7 @@ static __initdata struct tegra_clk_init_table common_clk_init_table[] = {
 	{ "emc",	NULL,		0,		true },
 	{ "csite",	NULL,		0,		true },
 	{ "timer", 	NULL,		0,		true },
+	{ "kfuse",	NULL,		0,		true },
 	{ "rtc",	NULL,		0,		true },
 
 	/* set frequencies of some device clocks */
@@ -88,6 +90,7 @@ void __init tegra_init_cache(void)
 
 	writel(0x331, p + L2X0_TAG_LATENCY_CTRL);
 	writel(0x441, p + L2X0_DATA_LATENCY_CTRL);
+	writel(2, p + L2X0_PWR_CTRL);
 
 	l2x0_init(p, 0x6C480001, 0x8200c3fe);
 #endif
@@ -140,7 +143,7 @@ void __init tegra_common_init(void)
 	tegra_init_power();
 	tegra_init_cache();
 	tegra_dma_init();
-	tegra_init_fuse_dma();
+	tegra_init_apb_dma();
 }
 
 static int __init tegra_bootloader_fb_arg(char *options)
