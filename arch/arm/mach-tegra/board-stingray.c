@@ -573,14 +573,6 @@ static struct tegra_sdhci_platform_data stingray_sdhci_platform_data4 = {
 	.power_gpio = TEGRA_GPIO_PI6,
 };
 
-/* User SD-Card, using GPIO values from the Harmony AOSP platform */
-static struct tegra_sdhci_platform_data stingray_sdhci_platform_data3 = {
-	.clk_id = NULL,
-	.force_hs = 0,
-	.cd_gpio = TEGRA_GPIO_PI5,
-	.wp_gpio = TEGRA_GPIO_PH1,
-};
-
 static struct tegra_i2c_platform_data stingray_i2c1_platform_data = {
 	.adapter_nr   = 0,
 	.bus_count    = 1,
@@ -643,12 +635,6 @@ static void stingray_sdhci_init(void)
 
 	platform_device_register(&tegra_sdhci_device2);
 	platform_device_register(&tegra_sdhci_device4);
-
-	/* configure the User SD-Card SDHCI channel after the internal SD so the
-	   numbering stays the same, just-in-case */
-	tegra_sdhci_device3.dev.platform_data = &stingray_sdhci_platform_data3;
-	platform_device_register(&tegra_sdhci_device3);
-
 }
 #define ATAG_BDADDR 0x43294329	/* stingray bluetooth address tag */
 #define ATAG_BDADDR_SIZE 4
@@ -1076,15 +1062,6 @@ static void __init tegra_stingray_init(void)
 	tegra_gpio_enable(TEGRA_GPIO_PU4);
 	gpio_request(TEGRA_GPIO_PU4, "4329_pwr");
 	gpio_direction_output(TEGRA_GPIO_PU4, 0);
-
-	/* SD-Card GPIO inits */
-	tegra_gpio_enable(TEGRA_GPIO_PI5);
-	gpio_request(TEGRA_GPIO_PI5, "SD-Card CD");
-	gpio_direction_input(TEGRA_GPIO_PI5);
-
-	tegra_gpio_enable(TEGRA_GPIO_PH1);
-	gpio_request(TEGRA_GPIO_PH1, "SD-Card WP");
-	gpio_direction_input(TEGRA_GPIO_PH1);
 
 	stingray_pinmux_init();
 
