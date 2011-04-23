@@ -59,7 +59,7 @@ static bool debug_data = false;
 #define MODEM_AUTOSUSPEND_DELAY	msecs_to_jiffies(1000)
 
 static const struct usb_device_id mdm6600_id_table[] = {
-	{ USB_DEVICE(0x22b8, 0x2a70) },
+	{ USB_DEVICE_AND_INTERFACE_INFO(0x22b8, 0x2a70, 0xff, 0xff, 0xff) },
 	{ },
 };
 MODULE_DEVICE_TABLE(usb, mdm6600_id_table);
@@ -263,6 +263,7 @@ static int mdm6600_attach(struct usb_serial *serial)
 					"mdm6600_write.%d", modem->number);
 	wake_lock_init(&modem->writelock, WAKE_LOCK_SUSPEND, modem->writelock_name);
 
+	usb_get_intf(serial->interface);
 	usb_enable_autosuspend(serial->dev);
 	usb_mark_last_busy(serial->dev);
 
@@ -373,6 +374,7 @@ static void mdm6600_release(struct usb_serial *serial)
 	}
 
 	usb_set_serial_data(serial, NULL);
+	usb_put_intf(serial->interface);
 	kfree(modem);
 }
 

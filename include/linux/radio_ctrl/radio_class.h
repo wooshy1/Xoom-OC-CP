@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Motorola, Inc.
+ * Copyright (C) 2011 Motorola, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -13,31 +13,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
- * 02111-1307, USA
+ * 02111-1307  USA
  */
+#ifndef __RADIO_CLASS_H__
+#define __RADIO_CLASS_H__
 
-#ifndef _LINUX_LED_LD_LP8550_H__
-#define _LINUX_LED_LD_LP8550_H__
+struct radio_dev {
+	const char    *name;
+	struct device *dev;
 
-#ifdef __KERNEL__
-
-#define LD_LP8550_LED_DEV "lcd-backlight"
-#define LD_LP8550_NAME "lp8550_led"
-
-struct lp8550_eeprom_data {
-	u8 eeprom_data;
+	ssize_t (*power_status)(struct radio_dev *rdev, char *buf);
+	ssize_t (*status)(struct radio_dev *rdev, char *buf);
+	ssize_t (*command)(struct radio_dev *rdev, char *buf);
 };
 
-struct lp8550_platform_data {
-	u8 power_up_brightness;
-	u8 dev_ctrl_config;
-	u8 brightness_control;
-	u8 dev_id;
-	u8 direct_ctrl;
-	struct lp8550_eeprom_data *eeprom_table;
-	int eeprom_tbl_sz;
-	int scaling_factor;
-};
+extern void radio_dev_unregister(struct radio_dev *radio_cdev);
+extern int radio_dev_register(struct radio_dev *radio_cdev);
 
-#endif	/* __KERNEL__ */
-#endif	/* _LINUX_LED_LD_LP8550_H__ */
+#define RADIO_STATUS_MAX_LENGTH		32
+#define RADIO_COMMAND_MAX_LENGTH	32
+#define RADIO_BOOTMODE_NORMAL		0
+#define RADIO_BOOTMODE_FLASH		1
+#endif /* __RADIO_CLASS_H__ */

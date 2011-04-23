@@ -59,6 +59,7 @@
 #include <mach/bcm_bt_lpm.h>
 
 #include <linux/usb/android_composite.h>
+#include <linux/usb/f_accessory.h>
 
 #include "board.h"
 #include "board-stingray.h"
@@ -80,12 +81,17 @@
 
 #define USB_MANUFACTURER_NAME           "Motorola"
 #define USB_PRODUCT_NAME                "MZ600"
+#define USB_PRODUCT_NAME_LTE            "MZ602"
 #define USB_PRODUCT_NAME_WIFI_ONLY      "MZ604"
 #define USB_PRODUCT_ID_BLAN             0x70A3
 #define USB_PRODUCT_ID_MTP              0x70A8
 #define USB_PRODUCT_ID_MTP_ADB          0x70A9
 #define USB_PRODUCT_ID_RNDIS            0x70AE
 #define USB_PRODUCT_ID_RNDIS_ADB        0x70AF
+#define USB_PRODUCT_ID_BP		0x70B0
+#define USB_PRODUCT_ID_BP_ADB		0x70B1
+#define USB_PRODUCT_ID_RNDIS_BP		0x70B2
+#define USB_PRODUCT_ID_RNDIS_BP_ADB	0x70B3
 #define USB_VENDOR_ID                   0x22b8
 
 struct tag_tegra {
@@ -188,6 +194,7 @@ static struct cpcap_audio_platform_data cpcap_audio_pdata = {
 	.state = &stingray_cpcap_audio_state,
 	.speaker_gpio = TEGRA_GPIO_PR3,
 	.headset_gpio = -1,
+	.spdif_gpio = TEGRA_GPIO_PD4,
 	.bluetooth_bypass = init_dac2,
 };
 
@@ -242,6 +249,10 @@ static struct tegra_audio_platform_data tegra_spdif_pdata = {
 
 static char *usb_functions_mtp[] = { "mtp" };
 static char *usb_functions_mtp_adb[] = { "mtp", "adb" };
+#ifdef CONFIG_USB_ANDROID_ACCESSORY
+static char *usb_functions_accessory[] = { "accessory" };
+static char *usb_functions_accessory_adb[] = { "accessory", "adb" };
+#endif
 #ifdef CONFIG_USB_ANDROID_RNDIS
 static char *usb_functions_rndis[] = { "rndis" };
 static char *usb_functions_rndis_adb[] = { "rndis", "adb" };
@@ -249,6 +260,9 @@ static char *usb_functions_rndis_adb[] = { "rndis", "adb" };
 static char *usb_functions_all[] = {
 #ifdef CONFIG_USB_ANDROID_RNDIS
 	"rndis",
+#endif
+#ifdef CONFIG_USB_ANDROID_ACCESSORY
+	"accessory",
 #endif
 	"mtp",
 	"adb"
@@ -265,6 +279,20 @@ static struct android_usb_product usb_products[] = {
 		.num_functions	= ARRAY_SIZE(usb_functions_mtp_adb),
 		.functions	= usb_functions_mtp_adb,
 	},
+#ifdef CONFIG_USB_ANDROID_ACCESSORY
+	{
+		.vendor_id	= USB_ACCESSORY_VENDOR_ID,
+		.product_id	= USB_ACCESSORY_PRODUCT_ID,
+		.num_functions	= ARRAY_SIZE(usb_functions_accessory),
+		.functions	= usb_functions_accessory,
+	},
+	{
+		.vendor_id	= USB_ACCESSORY_VENDOR_ID,
+		.product_id	= USB_ACCESSORY_ADB_PRODUCT_ID,
+		.num_functions	= ARRAY_SIZE(usb_functions_accessory_adb),
+		.functions	= usb_functions_accessory_adb,
+	},
+#endif
 #ifdef CONFIG_USB_ANDROID_RNDIS
 	{
 		.product_id	= USB_PRODUCT_ID_RNDIS,
@@ -325,6 +353,50 @@ static struct android_usb_platform_data andusb_plat_factory = {
 	.functions = factory_usb_functions,
 };
 
+static char *bp_usb_functions_bp[] = {
+	"acm", "usbnet"};
+static char *bp_usb_functions_bp_adb[] = {
+	"acm", "usbnet", "adb"};
+static char *bp_usb_functions_rndis_bp[] = {
+	"rndis", "acm", "usbnet"};
+static char *bp_usb_functions_all[] = {
+	"rndis", "acm", "usbnet", "adb"};
+
+static struct android_usb_product bp_usb_products[] = {
+	{
+		.product_id	= USB_PRODUCT_ID_BP,
+		.num_functions	= ARRAY_SIZE(bp_usb_functions_bp),
+		.functions	= bp_usb_functions_bp,
+	},
+	{
+		.product_id	= USB_PRODUCT_ID_BP_ADB,
+		.num_functions	= ARRAY_SIZE(bp_usb_functions_bp_adb),
+		.functions	= bp_usb_functions_bp_adb,
+	},
+	{
+		.product_id	= USB_PRODUCT_ID_RNDIS_BP,
+		.num_functions	= ARRAY_SIZE(bp_usb_functions_rndis_bp),
+		.functions	= bp_usb_functions_rndis_bp,
+	},
+	{
+		.product_id	= USB_PRODUCT_ID_RNDIS_BP_ADB,
+		.num_functions	= ARRAY_SIZE(bp_usb_functions_all),
+		.functions	= bp_usb_functions_all,
+	},
+};
+
+static struct android_usb_platform_data andusb_plat_bp = {
+	.vendor_id		= USB_VENDOR_ID,
+	.product_id		= USB_PRODUCT_ID_BP_ADB,
+	.manufacturer_name	= USB_MANUFACTURER_NAME,
+	.product_name		= USB_PRODUCT_NAME,
+	.serial_number		= "0000",
+	.num_products = ARRAY_SIZE(bp_usb_products),
+	.products = bp_usb_products,
+	.num_functions = ARRAY_SIZE(bp_usb_functions_all),
+	.functions = bp_usb_functions_all,
+};
+
 static struct platform_device usbnet_device = {
 	.name = "usbnet",
 };
@@ -344,6 +416,19 @@ static struct platform_device rndis_device = {
 	},
 };
 #endif
+
+static struct acm_platform_data acm_pdata = {
+	/* Modify num_inst at runtime depending on boot_mode */
+	.num_inst	= 1,
+};
+
+static struct platform_device acm_device = {
+	.name	= "acm",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &acm_pdata,
+	},
+};
 
 static struct tegra_utmip_config utmi_phy_config[] = {
 	[0] = {
@@ -565,12 +650,20 @@ static struct platform_device *stingray_devices[] __initdata = {
 
 extern struct tegra_sdhci_platform_data stingray_wifi_data; /* sdhci2 */
 
+static struct tegra_sdhci_platform_data stingray_sdhci_sdcard_platform_data = {
+	.clk_id = NULL,
+	.force_hs = 0,
+	.cd_gpio = TEGRA_GPIO_PI5,
+	.wp_gpio = -1,
+	.power_gpio = -1,
+};
+
 static struct tegra_sdhci_platform_data stingray_sdhci_platform_data4 = {
 	.clk_id = NULL,
 	.force_hs = 0,
-	.cd_gpio = TEGRA_GPIO_PH2,
-	.wp_gpio = TEGRA_GPIO_PH3,
-	.power_gpio = TEGRA_GPIO_PI6,
+	.cd_gpio = -1,
+	.wp_gpio = -1,
+	.power_gpio = -1,
 };
 
 static struct tegra_i2c_platform_data stingray_i2c1_platform_data = {
@@ -631,9 +724,11 @@ static void stingray_sdhci_init(void)
 {
 	/* TODO: setup GPIOs for cd, wd, and power */
 	tegra_sdhci_device2.dev.platform_data = &stingray_wifi_data;
+	tegra_sdhci_device3.dev.platform_data = &stingray_sdhci_sdcard_platform_data;
 	tegra_sdhci_device4.dev.platform_data = &stingray_sdhci_platform_data4;
 
 	platform_device_register(&tegra_sdhci_device2);
+	platform_device_register(&tegra_sdhci_device3);
 	platform_device_register(&tegra_sdhci_device4);
 }
 #define ATAG_BDADDR 0x43294329	/* stingray bluetooth address tag */
@@ -758,12 +853,14 @@ static void stingray_usb_init(void)
 
 	struct android_usb_platform_data *platform_data;
 
+	int factorycable = !strncmp(boot_mode, "factorycable",
+			BOOT_MODE_MAX_LEN);
+
 	tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
 	tegra_ehci2_device.dev.platform_data = &tegra_ehci_pdata[1];
 	tegra_ehci3_device.dev.platform_data = &tegra_ehci_pdata[2];
 
-	if (strncmp(boot_mode, "factorycable", BOOT_MODE_MAX_LEN) ||
-            !mot_boot_recovery)
+	if (!(factorycable && mot_boot_recovery))
 		platform_device_register(&tegra_udc_device);
 
 	if (stingray_hw_has_cdma())
@@ -785,25 +882,32 @@ static void stingray_usb_init(void)
 	platform_device_register(&rndis_device);
 #endif
 
-	if (!strncmp(boot_mode, "factorycable", BOOT_MODE_MAX_LEN) &&
-            !mot_boot_recovery)
-	{
-		platform_data = &andusb_plat_factory;
-		platform_device_register(&usbnet_device);
-	}
-	else {
-		platform_data = &andusb_plat;
-	}
+	if (!(factorycable && mot_boot_recovery)) {
+		if (factorycable) {
+			platform_data = &andusb_plat_factory;
+			platform_device_register(&usbnet_device);
+		} else if (!strncmp(boot_mode, "bp-tools",
+				BOOT_MODE_MAX_LEN)) {
+			platform_data = &andusb_plat_bp;
+			platform_device_register(&usbnet_device);
+			/* acm: LTE Modem + QC Modem + QC Diag */
+			acm_pdata.num_inst = 3;
+			platform_device_register(&acm_device);
+		} else {
+			platform_data = &andusb_plat;
+		}
 
-	if (!stingray_hw_has_cdma())
-		platform_data->product_name = USB_PRODUCT_NAME_WIFI_ONLY;
+		if (stingray_hw_has_lte())
+			platform_data->product_name = USB_PRODUCT_NAME_LTE;
+		else if (stingray_hw_has_cdma())
+			platform_data->product_name = USB_PRODUCT_NAME;
+		else
+			platform_data->product_name = USB_PRODUCT_NAME_WIFI_ONLY;
 
-	platform_data->serial_number = usb_serial_num;
-	androidusb_device.dev.platform_data = platform_data;
-
-	if (strncmp(boot_mode, "factorycable", BOOT_MODE_MAX_LEN) ||
-            !mot_boot_recovery)
+		platform_data->serial_number = usb_serial_num;
+		androidusb_device.dev.platform_data = platform_data;
 		platform_device_register(&androidusb_device);
+	}
 }
 
 static void stingray_reset(char mode, const char *cmd)
@@ -1058,10 +1162,24 @@ static void __init tegra_stingray_init(void)
 		tegra_dvfs_rail_disable_by_name("vdd_core");
 	}
 
+	/* disable spdif GPIO for now */
+	/* spdif line is turned on but never used, this causes pops
+	   on a speaker dock connected to HDMI monitor, later version
+	   h/w with spdif audio out will need this pin */
+	tegra_gpio_enable(TEGRA_GPIO_PD4);
+	gpio_request(TEGRA_GPIO_PD4, "spdif_enable");
+	gpio_direction_output(TEGRA_GPIO_PD4, 0);
+	gpio_export(TEGRA_GPIO_PD4, false);
+
 	/* Enable 4329 Power GPIO */
 	tegra_gpio_enable(TEGRA_GPIO_PU4);
 	gpio_request(TEGRA_GPIO_PU4, "4329_pwr");
 	gpio_direction_output(TEGRA_GPIO_PU4, 0);
+
+	/* Enable GPIO for SD card detect */
+	tegra_gpio_enable(TEGRA_GPIO_PI5);
+	gpio_request(TEGRA_GPIO_PI5, "sdcard_detect");
+	gpio_direction_input(TEGRA_GPIO_PI5);
 
 	stingray_pinmux_init();
 

@@ -299,6 +299,9 @@ static void tegra_rx_dma_complete_req(struct tegra_uart_port *t,
 		return;
 
 	tty_flip_buffer_push(u->state->port.tty);
+
+	if (t->rx_done_cb)
+		t->rx_done_cb(u);
 }
 
 static void tegra_rx_dma_complete_callback(struct tegra_dma_req *req)

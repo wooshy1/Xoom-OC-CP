@@ -22,9 +22,10 @@
 #include <linux/irq.h>
 #include <linux/kernel.h>
 #include <linux/leds-ld-cpcap.h>
-#include <linux/mdm6600_ctrl.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
+#include <linux/radio_ctrl/mdm6600_ctrl.h>
+#include <linux/radio_ctrl/wrigley_ctrl.h>
 #include <linux/reboot.h>
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/driver.h>
@@ -696,6 +697,20 @@ static struct platform_device mdm_ctrl_platform_device = {
 	},
 };
 
+static struct wrigley_ctrl_platform_data wrigley_ctrl_pdata = {
+	.gpio_disable = TEGRA_GPIO_PG0,
+	.gpio_reset = TEGRA_GPIO_PI6,
+	.gpio_force_flash = TEGRA_GPIO_PT5,
+};
+
+static struct platform_device wrigley_ctrl_pdev = {
+	.name = "wrigley",
+	.id = -1,
+	.dev = {
+		.platform_data = &wrigley_ctrl_pdata,
+	},
+};
+
 static void mdm_ctrl_register(void)
 {
 	int i;
@@ -714,6 +729,14 @@ static void mdm_ctrl_register(void)
 	}
 
 	platform_device_register(&mdm_ctrl_platform_device);
+}
+
+static void wrigley_ctrl_register(void)
+{
+	tegra_gpio_enable(wrigley_ctrl_pdata.gpio_reset);
+	tegra_gpio_enable(wrigley_ctrl_pdata.gpio_disable);
+	tegra_gpio_enable(wrigley_ctrl_pdata.gpio_force_flash);
+	platform_device_register(&wrigley_ctrl_pdev);
 }
 
 int __init stingray_power_init(void)
@@ -754,8 +777,10 @@ int __init stingray_power_init(void)
 	i2c_register_board_info(3, stingray_i2c_bus4_power_info,
 		ARRAY_SIZE(stingray_i2c_bus4_power_info));
 
-	if (stingray_hw_has_cdma())
+	if (stingray_hw_has_cdma()) {
 		mdm_ctrl_register();
+		wrigley_ctrl_register();
+	}
 
 	return 0;
 }

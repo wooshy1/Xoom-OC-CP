@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Motorola, Inc.
+ * Copyright (C) 2011 Motorola, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -13,31 +13,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
- * 02111-1307, USA
+ * 02111-1307  USA
  */
+#ifndef __LINUX_WRIGLEY_CTRL_H__
+#define __LINUX_WRIGLEY_CTRL_H__
 
-#ifndef _LINUX_LED_LD_LP8550_H__
-#define _LINUX_LED_LD_LP8550_H__
-
-#ifdef __KERNEL__
-
-#define LD_LP8550_LED_DEV "lcd-backlight"
-#define LD_LP8550_NAME "lp8550_led"
-
-struct lp8550_eeprom_data {
-	u8 eeprom_data;
+struct wrigley_ctrl_platform_data {
+	unsigned int gpio_disable;
+	unsigned int gpio_reset;
+	unsigned int gpio_force_flash;
 };
-
-struct lp8550_platform_data {
-	u8 power_up_brightness;
-	u8 dev_ctrl_config;
-	u8 brightness_control;
-	u8 dev_id;
-	u8 direct_ctrl;
-	struct lp8550_eeprom_data *eeprom_table;
-	int eeprom_tbl_sz;
-	int scaling_factor;
-};
-
-#endif	/* __KERNEL__ */
-#endif	/* _LINUX_LED_LD_LP8550_H__ */
+#endif /* __LINUX_WRIGLEY_CTRL_H__ */
