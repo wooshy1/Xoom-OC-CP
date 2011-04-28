@@ -30,6 +30,7 @@
 #include <linux/io.h>
 #include <linux/suspend.h>
 #include <linux/debugfs.h>
+#include <linux/slab.h>
 
 #include <asm/smp_twd.h>
 #include <asm/system.h>
@@ -41,19 +42,47 @@
  * Frequency table index must be sequential starting at 0 and frequencies
  * must be ascending.
  */
-static struct cpufreq_frequency_table freq_table[] = {
-	{ 0, 216000 },
-	{ 1, 312000 },
-	{ 2, 456000 },
-	{ 3, 608000 },
-	{ 4, 760000 },
-	{ 5, 816000 },
-	{ 6, 912000 },
-	{ 7, 1000000 },
-	{ 8, 1200000 },
-	{ 9, 1400000 },
-	{ 10, 1504000 },
-	{ 11, CPUFREQ_TABLE_END },
+static struct cpufreq_frequency_table *freq_table;
+
+static int init_freq_table(void)
+{
+	int i = 0;
+	static unsigned tegra_frequencies[] = {
+	216000,
+	312000,
+	456000,
+	608000,
+	760000,
+	816000,
+	912000,
+	1000000,
+#ifdef CONFIG_CPU_MAX_SPEED_1_0_GHZ
+	CPUFREQ_TABLE_END,
+#else
+	1200000,
+#ifdef CONFIG_CPU_MAX_SPEED_1_2_GHZ
+	CPUFREQ_TABLE_END,
+#else
+	1400000,
+#ifdef CONFIG_CPU_MAX_SPEED_1_4_GHZ
+	CPUFREQ_TABLE_END,
+#else
+	1504000,
+#endif
+#endif
+#endif
+	CPUFREQ_TABLE_END, };
+
+	if (!(freq_table = kmalloc(sizeof(tegra_frequencies) * sizeof(struct cpufreq_frequency_table), GFP_KERNEL)))
+		return -ENOMEM;
+
+	do
+		freq_table[i].index = i;
+	while ((freq_table[i].frequency = tegra_frequencies[i++]) != CPUFREQ_TABLE_END);
+
+	printk(KERN_INFO "%s: added %d CPU frequencies\n", __func__, i);
+
+	return 0;
 };
 
 #define NUM_CPUS	2
@@ -390,6 +419,8 @@ static int __init tegra_cpufreq_init(void)
 	 * CPU, has rescue worker task (in case of allocation deadlock,
 	 * etc.).  Single-threaded.
 	 */
+	if (init_freq_table())
+		return -ENOMEM;
 	workqueue = alloc_workqueue("cpu-tegra",
 				    WQ_HIGHPRI | WQ_UNBOUND | WQ_RESCUER, 1);
 	if (!workqueue)

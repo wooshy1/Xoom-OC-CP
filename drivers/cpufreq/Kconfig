@@ -18,6 +18,31 @@ if CPU_FREQ
 config CPU_FREQ_TABLE
 	tristate
 
+if MACH_STINGRAY
+choice
+	prompt "Limit Max CPU Frequency"
+	default CPU_MAX_SPEED_LIMIT_NONE
+	help
+	 Optionally limit the max speed of the CPU cores
+
+config CPU_MAX_SPEED_1_0_GHZ
+	bool "1.0 GHz"
+	select CPU_MAX_SPEED_LIMIT_1_0_GHZ
+
+config CPU_MAX_SPEED_1_2_GHZ
+	bool "1.2 GHz"
+	select CPU_MAX_SPEED_LIMIT_1_2_GHZ
+
+config CPU_MAX_SPEED_1_4_GHZ
+	bool "1.4 GHz"
+	select CPU_MAX_SPEED_LIMIT_1_4_GHZ
+
+config CPU_MAX_SPEED_LIMIT_NONE
+	bool "No limiting"
+endchoice
+
+endif # MACH_STINGRAY
+
 config CPU_FREQ_DEBUG
 	bool "Enable CPUfreq debugging"
 	help
