@@ -656,14 +656,15 @@ static struct tegra_sdhci_platform_data stingray_sdhci_sdcard_platform_data = {
 	.cd_gpio = TEGRA_GPIO_PI5,
 	.wp_gpio = -1,
 	.power_gpio = -1,
+	.rt_disable = 1,
 };
 
 static struct tegra_sdhci_platform_data stingray_sdhci_platform_data4 = {
 	.clk_id = NULL,
-	.force_hs = 0,
 	.cd_gpio = -1,
 	.wp_gpio = -1,
 	.power_gpio = -1,
+	.rt_disable = 1,
 };
 
 static struct tegra_i2c_platform_data stingray_i2c1_platform_data = {
