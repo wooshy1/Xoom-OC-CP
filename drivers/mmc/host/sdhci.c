@@ -1042,11 +1042,14 @@ static void sdhci_finish_command(struct sdhci_host *host)
 static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 {
 	int div = 0; /* Initialized for compiler warning */
+	int real_div = div, clk_mul = 1;
 	u16 clk = 0;
 	unsigned long timeout;
 
 	if (clock && clock == host->clock)
 		return;
+
+	host->mmc->actual_clock = 0;
 
 	if (host->ops->set_clock) {
 		host->ops->set_clock(host, clock);
@@ -1085,6 +1088,8 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 				 * Control register.
 				 */
 				clk = SDHCI_PROG_CLOCK_MODE;
+				real_div = div;
+				clk_mul = host->clk_mul;
 				div--;
 			}
 		} else {
@@ -1098,6 +1103,7 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 						break;
 				}
 			}
+			real_div = div;
 			div >>= 1;
 		}
 	} else {
@@ -1106,8 +1112,12 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 			if ((host->max_clk / div) <= clock)
 				break;
 		}
+		real_div = div;
 		div >>= 1;
 	}
+
+	if (real_div)
+		host->mmc->actual_clock = (host->max_clk * clk_mul) / real_div;
 
 	clk |= (div & SDHCI_DIV_MASK) << SDHCI_DIVIDER_SHIFT;
 	clk |= ((div & SDHCI_DIV_HI_MASK) >> SDHCI_DIV_MASK_LEN)

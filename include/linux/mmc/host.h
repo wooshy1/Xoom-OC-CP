@@ -330,6 +330,8 @@ struct mmc_host {
 #endif
 	struct mmc_async_req	*areq;		/* active async req */
 
+	unsigned int		actual_clock;	/* Actual HC clock rate */
+
 	unsigned long		private[0] ____cacheline_aligned;
 };
 
