@@ -65,7 +65,7 @@ choice
 	config DEFAULT_CFQ
 		bool "CFQ" if IOSCHED_CFQ=y
 
-   config DEFAULT_SIO
+	config DEFAULT_SIO
 		   bool "SIO" if IOSCHED_SIO=y
 
 	config DEFAULT_NOOP
