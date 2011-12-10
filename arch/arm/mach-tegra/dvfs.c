@@ -229,6 +229,12 @@ __tegra_dvfs_set_rate(struct dvfs *d, unsigned long rate)
 		while (i < d->num_freqs && rate > d->freqs[i])
 			i++;
 
+		if ((d->max_millivolts) &&
+		    (d->millivolts[i] > d->max_millivolts)) {
+			pr_warn("tegra_dvfs: voltage %d too high for dvfs on"
+				" %s\n", d->millivolts[i], d->clk_name);
+			return -EINVAL;
+		}
 		d->cur_millivolts = d->millivolts[i];
 	}
 
