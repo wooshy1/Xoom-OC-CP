@@ -1610,7 +1610,7 @@ void submit_bio(int rw, struct bio *bio)
 			count_vm_events(PGPGIN, count);
 		}
 
-		if (unlikely(block_dump) || unlikely((rw & WRITE) && (count != 8))) {
+		if (unlikely(block_dump)) {
 			char b[BDEVNAME_SIZE];
 			printk(KERN_DEBUG "%s(%d): %s block %Lu on %s (%u sectors)\n",
 			current->comm, task_pid_nr(current),
