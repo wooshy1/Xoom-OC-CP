@@ -165,6 +165,14 @@ config TEGRA_THERMAL_THROTTLE
 
 	  Enables Power/Reset/Carddetect function abstraction
 	  
-config TEGRA2_GPUOC
-    bool "Overclock the 3d GPU clock by 100mhz to 400mhz."
-    default y
+choice TEGRA2_GPUOC
+    prompt "3D GPU Overclock Options"
+    default TEGRA2_GPUOC_300M
+
+    config TEGRA2_GPUOC_300M
+    bool "Run the 3D GPU clock at the standard 300mhz"
+    config TEGRA2_GPUOC_350M
+    bool "Overclock the 3D GPU clock by 50mhz to 350mhz"
+    config TEGRA2_GPUOC_400M
+    bool "Overclock the 3D GPU clock by 100mhz to 400mhz"
+endchoice
