@@ -2221,11 +2221,7 @@ struct clk tegra_list_clks[] = {
 	PERIPH_CLK("uarte",	"uart.4",		NULL,	66,	0x1c4,	600000000, mux_pllp_pllc_pllm_clkm,	MUX),
 #ifdef CONFIG_TEGRA2_GPUOC_400M
 	PERIPH_CLK("3d",	"3d",			NULL,	24,	0x158,	400000000, mux_pllm_pllc_pllp_plla,	MUX | DIV_U71 | PERIPH_MANUAL_RESET), /* scales with voltage and process_id */
-#endif
-#ifdef CONFIG_TEGRA2_GPUOC_350M
-	PERIPH_CLK("3d",	"3d",			NULL,	24,	0x158,	350000000, mux_pllm_pllc_pllp_plla,	MUX | DIV_U71 | PERIPH_MANUAL_RESET), /* scales with voltage and process_id */
-#endif
-#ifdef CONFIG_TEGRA2_GPUOC_300M
+#else
 	PERIPH_CLK("3d",	"3d",			NULL,	24,	0x158,	300000000, mux_pllm_pllc_pllp_plla,	MUX | DIV_U71 | PERIPH_MANUAL_RESET), /* scales with voltage and process_id */
 #endif
 	PERIPH_CLK("2d",	"2d",			NULL,	21,	0x15c,	300000000, mux_pllm_pllc_pllp_plla,	MUX | DIV_U71), /* scales with voltage and process_id */

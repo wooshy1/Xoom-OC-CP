@@ -171,8 +171,6 @@ choice TEGRA2_GPUOC
 
     config TEGRA2_GPUOC_300M
     bool "Run the 3D GPU clock at the standard 300mhz"
-    config TEGRA2_GPUOC_350M
-    bool "Overclock the 3D GPU clock by 50mhz to 350mhz"
     config TEGRA2_GPUOC_400M
     bool "Overclock the 3D GPU clock by 100mhz to 400mhz"
 endchoice
