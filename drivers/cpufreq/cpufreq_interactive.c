@@ -184,9 +184,6 @@ static void cpufreq_interactive_timer(unsigned long data)
 			    cputime64_sub(pcpu->timer_run_time,
 					  pcpu->target_set_time)
 			    < above_hispeed_delay_val) {
-				trace_cpufreq_interactive_notyet(data, cpu_load,
-								 pcpu->target_freq,
-								 new_freq);
 				goto rearm;
 			}
 		}
