@@ -1388,6 +1388,7 @@ struct disk_events {
 	struct gendisk		*disk;		/* the associated disk */
 	spinlock_t		lock;
 
+	struct mutex		block_mutex;	/* protects blocking */
 	int			block;		/* event blocking depth */
 	unsigned int		pending;	/* events already sent out */
 	unsigned int		clearing;	/* events being cleared */
@@ -1437,6 +1438,15 @@ static void __disk_block_events(struct gendisk *disk, bool sync)
 	unsigned long flags;
 	bool cancel;
 
+	if (!ev)
+		return;
+
+	/*
+	 * Outer mutex ensures that the first blocker completes canceling
+	 * the event work before further blockers are allowed to finish.
+	 */
+	mutex_lock(&ev->block_mutex);
+
 	spin_lock_irqsave(&ev->lock, flags);
 	cancel = !ev->block++;
 	spin_unlock_irqrestore(&ev->lock, flags);
@@ -1447,6 +1457,8 @@ static void __disk_block_events(struct gendisk *disk, bool sync)
 		else
 			cancel_delayed_work(&disk->ev->dwork);
 	}
+
+	mutex_unlock(&ev->block_mutex);
 }
 
 static void __disk_unblock_events(struct gendisk *disk, bool check_now)
@@ -1767,6 +1779,7 @@ static void disk_add_events(struct gendisk *disk)
 	INIT_LIST_HEAD(&ev->node);
 	ev->disk = disk;
 	spin_lock_init(&ev->lock);
+	mutex_init(&ev->block_mutex);
 	ev->block = 1;
 	ev->poll_msecs = -1;
 	INIT_DELAYED_WORK(&ev->dwork, disk_events_workfn);
