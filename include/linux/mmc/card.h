@@ -161,11 +161,10 @@ struct mmc_card {
 
 /*
  *  The world is not perfect and supplies us with broken mmc/sdio devices.
- *  For at least a part of these bugs we need a work-around
+ *  For at least some of these bugs we need a work-around.
  */
 
 struct mmc_fixup {
-
 	/* CID-specific fields. */
 	const char *name;
 
@@ -175,7 +174,7 @@ struct mmc_fixup {
 	unsigned int manfid;
 	unsigned short oemid;
 
-       /* SDIO-specfic fields. You can use SDIO_ANY_ID here of course */
+	/* SDIO-specfic fields. You can use SDIO_ANY_ID here of course */
 	u16 cis_vendor, cis_device;
 
 	void (*vendor_fixup)(struct mmc_card *card, int data);
@@ -232,7 +231,7 @@ struct mmc_fixup {
 		    card->cid.month)
 
 /*
- * This hook just adds a quirk unconditionnally
+ * This hook just adds a quirk unconditionally.
  */
 static inline void __maybe_unused add_quirk(struct mmc_card *card, int data)
 {
@@ -240,7 +239,7 @@ static inline void __maybe_unused add_quirk(struct mmc_card *card, int data)
 }
 
 /*
- * This hook just removes a quirk unconditionnally
+ * This hook just removes a quirk unconditionally.
  */
 static inline void __maybe_unused remove_quirk(struct mmc_card *card, int data)
 {
