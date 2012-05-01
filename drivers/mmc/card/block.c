@@ -48,18 +48,18 @@ MODULE_ALIAS("mmc:block");
 #endif
 #define MODULE_PARAM_PREFIX "mmcblk."
 
-#define REL_WRITES_SUPPORTED(card) (mmc_card_mmc((card)) &&	\
-    (((card)->ext_csd.rel_param & EXT_CSD_WR_REL_PARAM_EN) ||	\
-     ((card)->ext_csd.rel_sectors)))
-
-static DEFINE_MUTEX(block_mutex);
-
 #define INAND_CMD38_ARG_EXT_CSD  113
 #define INAND_CMD38_ARG_ERASE    0x00
 #define INAND_CMD38_ARG_TRIM     0x01
 #define INAND_CMD38_ARG_SECERASE 0x80
 #define INAND_CMD38_ARG_SECTRIM1 0x81
 #define INAND_CMD38_ARG_SECTRIM2 0x88
+
+#define REL_WRITES_SUPPORTED(card) (mmc_card_mmc((card)) &&	\
+    (((card)->ext_csd.rel_param & EXT_CSD_WR_REL_PARAM_EN) ||	\
+     ((card)->ext_csd.rel_sectors)))
+
+static DEFINE_MUTEX(block_mutex);
 
 /*
  * The defaults come from config options but can be overriden by module
@@ -945,13 +945,6 @@ mmc_blk_set_blksize(struct mmc_blk_data *md, struct mmc_card *card)
 	return 0;
 }
 
-static const struct mmc_fixup blk_fixups[] =
-{
-	MMC_FIXUP("SEM16G", 0x2, 0x100, add_quirk, MMC_QUIRK_INAND_CMD38),
-	MMC_FIXUP("SEM32G", 0x2, 0x100, add_quirk, MMC_QUIRK_INAND_CMD38),
-	END_FIXUP
-};
-
 static void mmc_blk_remove_req(struct mmc_blk_data *md)
 {
 	if (md) {
@@ -996,6 +989,16 @@ static int mmc_add_disk(struct mmc_blk_data *md)
 
 	return ret;
 }
+
+static const struct mmc_fixup blk_fixups[] =
+{
+	MMC_FIXUP("SEM02G", 0x2, 0x100, add_quirk, MMC_QUIRK_INAND_CMD38),
+	MMC_FIXUP("SEM04G", 0x2, 0x100, add_quirk, MMC_QUIRK_INAND_CMD38),
+	MMC_FIXUP("SEM08G", 0x2, 0x100, add_quirk, MMC_QUIRK_INAND_CMD38),
+	MMC_FIXUP("SEM16G", 0x2, 0x100, add_quirk, MMC_QUIRK_INAND_CMD38),
+	MMC_FIXUP("SEM32G", 0x2, 0x100, add_quirk, MMC_QUIRK_INAND_CMD38),
+	END_FIXUP
+};
 
 static int mmc_blk_probe(struct mmc_card *card)
 {
