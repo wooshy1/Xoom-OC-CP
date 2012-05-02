@@ -103,6 +103,7 @@ struct mmc_blk_data {
 	unsigned int	part_curr;
 	struct device_attribute force_ro;
 	unsigned int	write_align_size;
+	unsigned int	write_align_limit;
 };
 
 static DEFINE_MUTEX(open_lock);
@@ -862,6 +863,21 @@ static bool mmc_adjust_write(struct mmc_card *card,
 	return true;
 }
 
+static void toshiba_32nm_probe(struct mmc_card *card, int data)
+{
+	struct mmc_blk_data *md = mmc_get_drvdata(card);
+
+	printk(KERN_INFO "Applying Toshiba 32nm workarounds\n");
+
+	/* Page size 8K, this card doesn't like unaligned writes
+	  across 8K boundary. */
+	md->write_align_size = 8192;
+
+	/* Doing the alignment for accesses > 12K seems to
+	  result in decreased perf. */
+	md->write_align_limit = 12288;
+}
+
 static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *req)
 {
 	struct mmc_blk_data *md = mq->data;
@@ -1452,6 +1468,11 @@ static const struct mmc_fixup blk_fixups[] =
 		  MMC_QUIRK_BLK_NO_CMD23),
 	MMC_FIXUP("MMC32G", 0x11, CID_OEMID_ANY, add_quirk_mmc,
 		  MMC_QUIRK_BLK_NO_CMD23),
+
+	/* 8K unaligned access fix for Toshiba 32nm parts */
+	MMC_FIXUP("MMC16G", 0x11, 0x100, toshiba_32nm_probe, 0),
+	MMC_FIXUP("MMC32G", 0x11, 0x100, toshiba_32nm_probe, 0),
+
 	END_FIXUP
 };
 
