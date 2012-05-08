@@ -1467,12 +1467,14 @@ static const struct mmc_fixup blk_fixups[] =
 	 *
 	 * N.B. This doesn't affect SD cards.
 	 */
+#ifndef CONFIG_MMC_TOSH_QUIRK_BLK_CMD23
 	MMC_FIXUP("MMC08G", 0x11, CID_OEMID_ANY, add_quirk_mmc,
 		  MMC_QUIRK_BLK_NO_CMD23),
 	MMC_FIXUP("MMC16G", 0x11, CID_OEMID_ANY, add_quirk_mmc,
 		  MMC_QUIRK_BLK_NO_CMD23),
 	MMC_FIXUP("MMC32G", 0x11, CID_OEMID_ANY, add_quirk_mmc,
 		  MMC_QUIRK_BLK_NO_CMD23),
+#endif
 
 	/* 8K unaligned access fix for Toshiba 32nm parts */
 	MMC_FIXUP("MMC16G", 0x11, 0x100, toshiba_32nm_probe, 0),
