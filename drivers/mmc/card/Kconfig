@@ -76,3 +76,15 @@ config MMC_TEST
 
 	  This driver is only of interest to those developing or
 	  testing a host driver. Most people should say N here.
+
+config MMC_TOSH_QUIRK_BLK_CMD23
+	bool "Use CMD23 on Toshiba EMMC devices"
+	  default n
+	  help
+	    Say Y here to enable CMD23 (large block) I/O on Toshiba
+	    MMC32G, MMC16G and MMC08G EMMC devices. Normally this is
+	    turned off as it has been shown to cause performance
+	    degredation, but with enhancements of late to the MMC Block
+	    layer it does show a measurable improvement. This may be
+	    device-dependent, based on the revision of EMMC device in
+	    your system.
