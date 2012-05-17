@@ -910,7 +910,7 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *req)
 
 		/* Check for unaligned accesses straddling pages. */
 		if (rq_data_dir(req) == WRITE)
-			mmc_adjust_write(card, &brq.mrq);
+			mmc_adjust_write(card, &brq->mrq);
 
 		/*
 		 * The block layer doesn't support all sector count
