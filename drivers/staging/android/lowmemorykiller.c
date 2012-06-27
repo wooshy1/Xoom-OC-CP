@@ -38,7 +38,7 @@
 #include <linux/slab.h>
 #include <linux/math64.h>
 
-#define LOWMEM_ADJ_SLOTS 12
+#define LOWMEM_ADJ_SLOTS 6
 static uint32_t lowmem_debug_level = 2;
 static int lowmem_adj[LOWMEM_ADJ_SLOTS] = {
 	0,
@@ -61,7 +61,7 @@ static unsigned long lowmem_deathpending_timeout;
 static int lowmem_oldmethod = 0;
 static uint64_t pages_total;
 static unsigned long procs_total;
-static unsigned lowmem_avg_pages;
+static unsigned lowmem_avg_pages, lowmem_total_sweeps, lowmem_effective_sweeps;
 static int number_of_slots = LOWMEM_ADJ_SLOTS;
 
 DEFINE_SPINLOCK(lowmem_lock);
@@ -111,6 +111,8 @@ static int lowmem_shrink(struct shrinker *s, int nr_to_scan, gfp_t gfp_mask)
 						global_page_state(NR_SHMEM);
 	unsigned lowmem_delta = (1048576 * 1024) / PAGE_SIZE; /* 1GB system RAM */
 	int *ooms_seen = kzalloc(sizeof(int) * 20, GFP_ATOMIC);
+
+	lowmem_total_sweeps++;
 
 	/*
 	 * If we already have a death outstanding, then
@@ -204,6 +206,7 @@ static int lowmem_shrink(struct shrinker *s, int nr_to_scan, gfp_t gfp_mask)
 					lowmem_delta = delta;
 			}
 		}
+		lowmem_effective_sweeps++;
 		selected = p;
 		selected_tasksize = tasksize;
 		selected_oom_adj = oom_adj;
@@ -274,6 +277,8 @@ module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
 module_param_named(old_method, lowmem_oldmethod, int, S_IRUGO| S_IWUSR);
 module_param_named(avg_pages, lowmem_avg_pages, uint, S_IRUGO);
+module_param_named(total_sweeps, lowmem_total_sweeps, uint, S_IRUGO);
+module_param_named(effective_sweeps, lowmem_effective_sweeps, uint, S_IRUGO);
 module_param_named(slot_count, number_of_slots, int, S_IRUGO);
 
 module_init(lowmem_init);
