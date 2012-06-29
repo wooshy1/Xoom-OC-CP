@@ -1251,15 +1251,6 @@ mmc_blk_set_blksize(struct mmc_blk_data *md, struct mmc_card *card);
 
 static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 {
-#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
-	struct mmc_blk_data *md = mq->data;
-	struct mmc_card *card = md->queue.card;
-
-	if (mmc_bus_needs_resume(card->host)) {
-		mmc_resume_bus(card->host);
-		mmc_blk_set_blksize(md, card);
-	}
-#endif
 	int ret;
 	struct mmc_blk_data *md = mq->data;
 	struct mmc_card *card = md->queue.card;
@@ -1267,7 +1258,6 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 	if (mmc_bus_needs_resume(card->host)) {
 		mmc_resume_bus(card->host);
-		mmc_blk_set_blksize(md, card);
 	}
 #endif
 
