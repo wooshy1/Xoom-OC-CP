@@ -35,19 +35,16 @@
 #include <linux/oom.h>
 #include <linux/sched.h>
 #include <linux/notifier.h>
-#include <linux/slab.h>
-#include <linux/math64.h>
 
-#define LOWMEM_ADJ_SLOTS 6
 static uint32_t lowmem_debug_level = 2;
-static int lowmem_adj[LOWMEM_ADJ_SLOTS] = {
+static int lowmem_adj[6] = {
 	0,
 	1,
 	6,
 	12,
 };
 static int lowmem_adj_size = 4;
-static size_t lowmem_minfree[LOWMEM_ADJ_SLOTS] = {
+static size_t lowmem_minfree[6] = {
 	3 * 512,	/* 6MB */
 	2 * 1024,	/* 8MB */
 	4 * 1024,	/* 16MB */
@@ -57,19 +54,6 @@ static int lowmem_minfree_size = 4;
 
 static struct task_struct *lowmem_deathpending;
 static unsigned long lowmem_deathpending_timeout;
-
-static int lowmem_oldmethod = 0;
-static uint64_t pages_total;
-static unsigned long procs_total;
-static unsigned lowmem_avg_pages, lowmem_total_sweeps, lowmem_effective_sweeps;
-static int number_of_slots = LOWMEM_ADJ_SLOTS;
-
-DEFINE_SPINLOCK(lowmem_lock);
-
-#define PAGESZ_KB (PAGE_SIZE / 1024)
-
-/* approx pg_sz of "average" adjusted process */
-#define INITIAL_KILL_TARGET 4608;
 
 #define lowmem_print(level, x...)			\
 	do {						\
@@ -101,7 +85,7 @@ static int lowmem_shrink(struct shrinker *s, int nr_to_scan, gfp_t gfp_mask)
 	struct task_struct *selected = NULL;
 	int rem = 0;
 	int tasksize;
-	int i, banner = 0;
+	int i;
 	int min_adj = OOM_ADJUST_MAX + 1;
 	int selected_tasksize = 0;
 	int selected_oom_adj;
@@ -109,10 +93,6 @@ static int lowmem_shrink(struct shrinker *s, int nr_to_scan, gfp_t gfp_mask)
 	int other_free = global_page_state(NR_FREE_PAGES);
 	int other_file = global_page_state(NR_FILE_PAGES) -
 						global_page_state(NR_SHMEM);
-	unsigned lowmem_delta = (1048576 * 1024) / PAGE_SIZE; /* 1GB system RAM */
-	int *ooms_seen = kzalloc(sizeof(int) * 20, GFP_ATOMIC);
-
-	lowmem_total_sweeps++;
 
 	/*
 	 * If we already have a death outstanding, then
@@ -137,7 +117,7 @@ static int lowmem_shrink(struct shrinker *s, int nr_to_scan, gfp_t gfp_mask)
 		}
 	}
 	if (nr_to_scan > 0)
-		lowmem_print(4, "lowmem_shrink %d, mask %X, ofree %d ofile %d, min_adj %d\n",
+		lowmem_print(3, "lowmem_shrink %d, %x, ofree %d %d, ma %d\n",
 			     nr_to_scan, gfp_mask, other_free, other_file,
 			     min_adj);
 	rem = global_page_state(NR_ACTIVE_ANON) +
@@ -151,7 +131,7 @@ static int lowmem_shrink(struct shrinker *s, int nr_to_scan, gfp_t gfp_mask)
 	}
 	selected_oom_adj = min_adj;
 
-	spin_lock(&lowmem_lock);
+	read_lock(&tasklist_lock);
 	for_each_process(p) {
 		struct mm_struct *mm;
 		struct signal_struct *sig;
@@ -165,70 +145,31 @@ static int lowmem_shrink(struct shrinker *s, int nr_to_scan, gfp_t gfp_mask)
 			continue;
 		}
 		oom_adj = sig->oom_adj;
-
-		lowmem_print(5, "oom_adj for pid %d: %d\n", p->pid, oom_adj);
-		if (ooms_seen && (oom_adj > -1))
-			ooms_seen[oom_adj]++;
-
-		pages_total += tasksize = get_mm_rss(mm);
-		task_unlock(p);
-		procs_total++;
-
 		if (oom_adj < min_adj) {
+			task_unlock(p);
 			continue;
 		}
+		tasksize = get_mm_rss(mm);
+		task_unlock(p);
 		if (tasksize <= 0)
 			continue;
 		if (selected) {
 			if (oom_adj < selected_oom_adj)
 				continue;
-
-			if (lowmem_oldmethod) {
-				if (oom_adj == selected_oom_adj &&
-				    tasksize <= selected_tasksize)
-					continue;
-			} else {
-				unsigned kill_target, delta;
-
-				if (procs_total > 100)
-					kill_target = (unsigned) lowmem_avg_pages;
-				else
-					kill_target = INITIAL_KILL_TARGET;
-
-				delta = abs(kill_target - tasksize);
-
-				lowmem_print(3, "%s: l_delta %u delta %u kill_target %u tasksize %u oom_adj %d\n",
-					__func__, lowmem_delta, delta,
-					kill_target, tasksize, oom_adj);
-				if ((oom_adj == selected_oom_adj) && (delta > lowmem_delta))
-					continue;
-				if (delta <= lowmem_delta)
-					lowmem_delta = delta;
-			}
+			if (oom_adj == selected_oom_adj &&
+			    tasksize <= selected_tasksize)
+				continue;
 		}
-		lowmem_effective_sweeps++;
 		selected = p;
 		selected_tasksize = tasksize;
 		selected_oom_adj = oom_adj;
-		if (!banner++) {
-			int i;
-			lowmem_print(4, "NTS:%7luK MA:%3d MFs:",
-				nr_to_scan * PAGESZ_KB, min_adj);
-			for (i = 0; i < max(lowmem_minfree_size, lowmem_adj_size); i++) {
-				lowmem_print(4, "%3d:%6luK",
-				i < lowmem_adj_size ? lowmem_adj[i] : -1,
-				i < lowmem_minfree_size ? lowmem_minfree[i] * PAGESZ_KB : 0);
-			}
-			lowmem_print(4, "\n");
-		};
-		lowmem_print(2, "select %d (%s), adj %d, size %d (%luK), to kill\n",
-			     p->pid, p->comm, oom_adj, tasksize, tasksize * PAGESZ_KB);
+		lowmem_print(2, "select %d (%s), adj %d, size %d, to kill\n",
+			     p->pid, p->comm, oom_adj, tasksize);
 	}
 	if (selected) {
-		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d (%luK)\n",
+		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d\n",
 			     selected->pid, selected->comm,
-			     selected_oom_adj, selected_tasksize,
-			     selected_tasksize * PAGESZ_KB);
+			     selected_oom_adj, selected_tasksize);
 		lowmem_deathpending = selected;
 		lowmem_deathpending_timeout = jiffies + HZ;
 		force_sig(SIGKILL, selected);
@@ -236,18 +177,7 @@ static int lowmem_shrink(struct shrinker *s, int nr_to_scan, gfp_t gfp_mask)
 	}
 	lowmem_print(4, "lowmem_shrink %d, %x, return %d\n",
 		     nr_to_scan, gfp_mask, rem);
-	if (ooms_seen) {
-		int i;
-		lowmem_print(4, "ooms seen: ");
-		for (i = 0; i < 20; i++)
-			if (ooms_seen[i])
-				lowmem_print(4, "%2d:%-2d ",
-				  i, ooms_seen[i]);
-		lowmem_print(4, "\n");
-	};
-	kfree(ooms_seen);
-	spin_unlock(&lowmem_lock);
-	lowmem_avg_pages = (unsigned) div_u64(pages_total, procs_total);
+	read_unlock(&tasklist_lock);
 	return rem;
 }
 
@@ -275,13 +205,9 @@ module_param_array_named(adj, lowmem_adj, int, &lowmem_adj_size,
 module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 			 S_IRUGO | S_IWUSR);
 module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
-module_param_named(old_method, lowmem_oldmethod, int, S_IRUGO| S_IWUSR);
-module_param_named(avg_pages, lowmem_avg_pages, uint, S_IRUGO);
-module_param_named(total_sweeps, lowmem_total_sweeps, uint, S_IRUGO);
-module_param_named(effective_sweeps, lowmem_effective_sweeps, uint, S_IRUGO);
-module_param_named(slot_count, number_of_slots, int, S_IRUGO);
 
 module_init(lowmem_init);
 module_exit(lowmem_exit);
 
 MODULE_LICENSE("GPL");
+
